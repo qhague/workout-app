@@ -7,7 +7,6 @@ const MUSCLE_GROUPS = ['', 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'L
 
 export default function Exercises({ onSync }) {
   const [newName,    setNewName]    = useState('');
-  const [newGroup,   setNewGroup]   = useState('');
   const [fields,     setFields]     = useState({ weight: true, reps: true, time: false });
   const [filterGroup, setFilterGroup] = useState('');
   const [chartEx,    setChartEx]    = useState(null);
@@ -31,7 +30,7 @@ export default function Exercises({ onSync }) {
     const activeFields = Object.entries(fields).filter(([, on]) => on).map(([f]) => f);
     if (!activeFields.length) return alert('Select at least one field.');
     const id = name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
-    DB.set('exercises', [...getExercises(), { id, name, fields: activeFields, muscleGroup: newGroup }]);
+    DB.set('exercises', [...getExercises(), { id, name, fields: activeFields }]);
     setNewName('');
     onSync();
     forceUpdate(n => n + 1);
@@ -121,10 +120,6 @@ export default function Exercises({ onSync }) {
           value={newName} onChange={e => setNewName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && addExercise()}
         />
-        <select className="input-field" value={newGroup} onChange={e => setNewGroup(e.target.value)}>
-          <option value="">— Muscle group (optional) —</option>
-          {MUSCLE_GROUPS.filter(Boolean).map(g => <option key={g} value={g}>{g}</option>)}
-        </select>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Track fields:</div>
         <div className="field-toggles">
           {['weight', 'reps', 'time'].map(f => (

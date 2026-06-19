@@ -419,7 +419,7 @@ export default function Workout({ activeWorkout, onSave, onNav, userId }) {
     const saveTemplate = confirm('Save this workout as a template for future use?');
     if (saveTemplate) {
       const templates = DB.get('templates') || [];
-      templates.push({ name: w.name, type: w.type, exercises: JSON.parse(JSON.stringify(w.exercises)), date: new Date().toLocaleDateString() });
+      templates.push({ name: w.name, type: w.type, exercises: JSON.parse(JSON.stringify(w.exercises)), date: new Date().toLocaleDateString(), favorite: false });
       DB.set('templates', templates);
     }
 

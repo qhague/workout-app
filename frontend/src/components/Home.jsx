@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DB } from '../db';
-import { exportData } from '../api';
+import { exportData, syncData } from '../api';
 import { computeStats } from '../utils/statsUtils';
 import WorkoutDetails from './WorkoutDetails';
 
@@ -20,6 +20,35 @@ function getRelativeTime(dateStr) {
   return `Over ${years} year${years > 1 ? 's' : ''} ago`;
 }
 
+const WEIGHT_COMPARISONS = [
+  { weight: 14_700_000, emoji: '🗼', label: 'Eiffel Tower' },
+  { weight: 4_500_000,  emoji: '🚀', label: 'Space Shuttle' },
+  { weight: 450_000,    emoji: '🗽', label: 'Statue of Liberty' },
+  { weight: 300_000,    emoji: '🐳', label: 'blue whale' },
+  { weight: 90_000,     emoji: '✈️',  label: 'Boeing 737' },
+  { weight: 60_000,     emoji: '🐋', label: 'humpback whale' },
+  { weight: 28_000,     emoji: '🚌', label: 'city bus' },
+  { weight: 13_000,     emoji: '🐘', label: 'elephant' },
+  { weight: 2_000,      emoji: '🚗', label: 'small car' },
+  { weight: 400,        emoji: '🎹', label: 'grand piano' },
+  { weight: 250,        emoji: '🐼', label: 'panda' },
+  { weight: 65,         emoji: '🐕', label: 'golden retriever' },
+  { weight: 25,         emoji: '🛞', label: 'car tire' },
+  { weight: 16,         emoji: '🎳', label: 'bowling ball' },
+  { weight: 8.34,       emoji: '💧', label: 'gallon of water' },
+  { weight: 4.5,        emoji: '🧱', label: 'brick' },
+  { weight: 0.8,        emoji: '🥤', label: 'can of soda' },
+];
+
+function getWeightComparison(lbs) {
+  for (const { weight, emoji, label } of WEIGHT_COMPARISONS) {
+    if (lbs >= weight) {
+      return { count: Math.floor(lbs / weight), emoji, label };
+    }
+  }
+  return null;
+}
+
 function StatCard({ label, value }) {
   return (
     <div style={{ flex: 1, background: 'var(--bg)', borderRadius: 10, padding: '12px 8px', textAlign: 'center' }}>
@@ -36,6 +65,12 @@ export default function Home({ username, userId, activeWorkout, onNav, onLogout,
   const [, forceUpdate] = useState(0);
 
   const templates = DB.get('templates') || [];
+  const sortedTemplates = templates
+    .map((t, idx) => ({ ...t, _origIdx: idx }))
+    .sort((a, b) => {
+      if (!!a.favorite !== !!b.favorite) return a.favorite ? -1 : 1;
+      return new Date(b.date || 0) - new Date(a.date || 0);
+    });
   const history   = DB.get('workouts')  || [];
   const program   = DB.get('program')   || {};
   const stats     = computeStats(history);
@@ -95,6 +130,14 @@ export default function Home({ username, userId, activeWorkout, onNav, onLogout,
     forceUpdate(n => n + 1);
   }
 
+  function toggleFavorite(origIdx) {
+    const updated = [...templates];
+    updated[origIdx] = { ...updated[origIdx], favorite: !updated[origIdx].favorite };
+    DB.set('templates', updated);
+    syncData(userId, null);
+    forceUpdate(n => n + 1);
+  }
+
   function setProgramDay(day, val) {
     const updated = { ...program, [day]: val === '' ? null : parseInt(val) };
     DB.set('program', updated);
@@ -119,7 +162,7 @@ export default function Home({ username, userId, activeWorkout, onNav, onLogout,
 
   function saveHistoryAsTemplate(w) {
     const templates = DB.get('templates') || [];
-    templates.push({ name: w.name, type: w.type, exercises: JSON.parse(JSON.stringify(w.exercises)), date: new Date().toLocaleDateString() });
+    templates.push({ name: w.name, type: w.type, exercises: JSON.parse(JSON.stringify(w.exercises)), date: new Date().toLocaleDateString(), favorite: false });
     DB.set('templates', templates);
     alert(`"${w.name}" saved as template.`);
     forceUpdate(n => n + 1);
@@ -163,15 +206,19 @@ export default function Home({ username, userId, activeWorkout, onNav, onLogout,
       {history.length > 0 && (
         <div className="card">
           <div style={{ display: 'flex', gap: 10 }}>
-            <StatCard label="Streak 🔥" value={stats.streak > 0 ? `${stats.streak}d` : '—'} />
+            <StatCard label="Streak" value={stats.streak > 0 ? `${stats.streak}d` : '—'} />
             <StatCard label="This Week" value={stats.weekCount} />
             <StatCard label="Week Mins" value={stats.weekMins} />
           </div>
-          {stats.weekVolume > 0 && (
-            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-              {stats.weekVolume.toLocaleString()} lbs lifted this week
-            </div>
-          )}
+          {stats.weekVolume > 0 && (() => {
+            const comp = getWeightComparison(stats.weekVolume);
+            return (
+              <div style={{ marginTop: 10, textAlign: 'center', fontSize: 12, color: 'var(--text)' }}>
+                {stats.weekVolume.toLocaleString()} lbs lifted this week
+                {comp && ` = more than ${comp.count} ${comp.label}${comp.count !== 1 ? 's' : ''} ${comp.emoji}`}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -217,11 +264,11 @@ export default function Home({ username, userId, activeWorkout, onNav, onLogout,
       </div>
 
       {/* Templates */}
-      {templates.length > 0 && (
+      {sortedTemplates.length > 0 && (
         <>
           <div className="page-header" style={{ border: 'none', fontSize: 18, paddingBottom: 0 }}>Templates</div>
-          {templates.map((t, idx) => (
-            <div key={idx} className="card">
+          {sortedTemplates.map(t => (
+            <div key={t._origIdx} className="card" style={t.favorite ? { borderColor: 'var(--accent)' } : {}}>
               <div className="flex-between" style={{ marginBottom: 8 }}>
                 <div>
                   <strong>{t.name}</strong>{' '}
@@ -230,14 +277,17 @@ export default function Home({ username, userId, activeWorkout, onNav, onLogout,
                     {t.exercises.length} Exercises {t.date ? `· ${t.date}` : ''}
                   </div>
                 </div>
-                <button className="btn btn-primary" style={{ width: 'auto', padding: '6px 12px' }} onClick={() => startFromTemplate(idx)}>
+                <button className="btn btn-primary" style={{ width: 'auto', padding: '6px 12px' }} onClick={() => startFromTemplate(t._origIdx)}>
                   Start
                 </button>
               </div>
               <div style={{ display: 'flex', gap: 6, borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 8 }}>
-                <button className="btn" style={{ flex: 1, padding: 6, fontSize: 12 }} onClick={() => editTemplate(idx)}>✎ Edit</button>
-                <button className="btn" style={{ flex: 1, padding: 6, fontSize: 12 }} onClick={() => duplicateTemplate(idx)}>⧉ Copy</button>
-                <button className="btn btn-danger" style={{ flex: 1, padding: 6, fontSize: 12 }} onClick={() => deleteTemplate(idx)}>✕ Delete</button>
+                <button className="btn" style={{ flex: 1, padding: 6, fontSize: 12 }} onClick={() => editTemplate(t._origIdx)}>✎ Edit</button>
+                <button className="btn" style={{ flex: 1, padding: 6, fontSize: 12 }} onClick={() => duplicateTemplate(t._origIdx)}>⧉ Copy</button>
+                <button className="btn" style={{ flex: 1, padding: 6, fontSize: 12, color: t.favorite ? 'var(--accent)' : 'var(--text-muted)' }} onClick={() => toggleFavorite(t._origIdx)}>
+                  {t.favorite ? '★' : '☆'} Favorite
+                </button>
+                <button className="btn btn-danger" style={{ flex: 1, padding: 6, fontSize: 12 }} onClick={() => deleteTemplate(t._origIdx)}>✕ Delete</button>
               </div>
             </div>
           ))}

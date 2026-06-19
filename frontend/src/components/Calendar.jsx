@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { DB } from '../db';
 import WorkoutDetails from './WorkoutDetails';
 
@@ -7,6 +7,13 @@ export default function Calendar({ onStartWorkout, onNav }) {
   const [year,     setYear]     = useState(new Date().getFullYear());
   const [selected, setSelected] = useState(null); // dateStr
   const [detailW,  setDetailW]  = useState(null); // { workout, idx }
+  const drilldownRef = useRef(null);
+
+  useEffect(() => {
+    if (selected && drilldownRef.current) {
+      drilldownRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [selected]);
 
   const history = DB.get('workouts') || [];
 
@@ -91,7 +98,7 @@ export default function Calendar({ onStartWorkout, onNav }) {
 
       {/* Day drill-down */}
       {selected && (
-        <div className="card">
+        <div className="card" ref={drilldownRef}>
           <div style={{ fontWeight: 700, color: 'var(--accent)', marginBottom: 10 }}>{selected}</div>
           {selectedWorkouts.length === 0 ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Rest day</div>

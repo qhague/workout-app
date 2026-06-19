@@ -29,17 +29,23 @@ export function computeSetCount(workout) {
 export function computeStats(history) {
   if (!history.length) return { streak: 0, weekCount: 0, weekVolume: 0, weekMins: 0 };
 
-  // Streak — consecutive calendar days (most recent first)
+  // Streak — consecutive workout days, with 1 rest-day grace before breaking
   const daySet = new Set(history.map(w => normDate(w.date)));
   let streak = 0;
+  let restDaysUsed = 0;
   const today = new Date();
   for (let i = 0; i < 365; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     if (daySet.has(d.toLocaleDateString())) {
       streak++;
-    } else if (i > 0) {
-      break;
+      restDaysUsed = 0;       // reset grace on any workout day
+    } else if (i === 0) {
+      // today with no workout yet — don't penalise
+    } else if (restDaysUsed < 1) {
+      restDaysUsed++;          // use the one grace rest day
+    } else {
+      break;                   // second consecutive rest day — streak ends
     }
   }
 
