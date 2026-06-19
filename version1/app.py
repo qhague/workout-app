@@ -1,10 +1,8 @@
 from flask_cors import CORS
-from flask import Flask, request, jsonify, render_template, Response
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
-import csv
-import io
 import os
 
 app = Flask(__name__)
@@ -103,70 +101,6 @@ def sync_data():
 
     db.session.commit()
     return jsonify({'message': 'All data safely synced!'})
-
-@app.route('/export_data', methods=['POST'])
-def export_data():
-    data = request.json
-    user = User.query.get(data['user_id'])
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    workouts   = safe_load(user.workouts_json, [])
-    templates  = safe_load(user.templates_json, [])
-    exercises  = safe_load(user.exercises_json, []) or []
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # --- Workouts sheet (flattened to one row per set) ---
-    writer.writerow(['=== WORKOUTS ==='])
-    writer.writerow(['Date', 'Workout Name', 'Type', 'Duration (min)',
-                     'Exercise', 'Set #', 'Weight (lbs)', 'Reps', 'Time (sec)', 'Completed'])
-    for w in workouts:
-        date     = w.get('date', '')
-        name     = w.get('name', '')
-        wtype    = w.get('type', '')
-        duration = round(w.get('duration', 0) / 60, 1)
-        for ex in w.get('exercises', []):
-            ex_name = ex.get('name', '')
-            for i, s in enumerate(ex.get('sets', []), 1):
-                writer.writerow([
-                    date, name, wtype, duration,
-                    ex_name, i,
-                    s.get('weight', ''),
-                    s.get('reps', ''),
-                    s.get('time', ''),
-                    'Yes' if s.get('completed') else 'No'
-                ])
-
-    writer.writerow([])
-
-    # --- Templates ---
-    writer.writerow(['=== TEMPLATES ==='])
-    writer.writerow(['Template Name', 'Type', 'Last Modified', 'Exercise', 'Default Sets',
-                     'Fields'])
-    for t in templates:
-        for ex in t.get('exercises', []):
-            writer.writerow([
-                t.get('name', ''), t.get('type', ''), t.get('date', ''),
-                ex.get('name', ''), len(ex.get('sets', [])),
-                ' + '.join(ex.get('fields', []))
-            ])
-
-    writer.writerow([])
-
-    # --- Exercise library ---
-    writer.writerow(['=== EXERCISE LIBRARY ==='])
-    writer.writerow(['Exercise Name', 'ID', 'Tracked Fields'])
-    for ex in exercises:
-        writer.writerow([ex.get('name', ''), ex.get('id', ''), ' + '.join(ex.get('fields', []))])
-
-    csv_bytes = output.getvalue().encode('utf-8-sig')  # utf-8-sig adds BOM for Excel
-    return Response(
-        csv_bytes,
-        mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename=ironlog_{user.username}.csv'}
-    )
 
 if __name__ == '__main__':
     app.run(debug=True)

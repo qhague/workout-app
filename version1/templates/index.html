@@ -32,14 +32,10 @@
     .check-btn { width: 100%; height: 44px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: transparent; display: flex; justify-content: center; align-items: center; font-size: 18px; transition: 0.2s; }
     .check-btn.done { background: rgba(200,255,0,0.2); border-color: var(--accent); color: var(--accent); }
 
+    .superset-bracket { border-left: 3px solid #38bdf8; border-radius: 0 12px 12px 0; margin-top: 4px; border-top: none;}
     .badge { font-size: 10px; background: #333; color: #fff; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+    .drop-badge { background: #ff4040; }
     .type-badge { background: var(--accent); color: #000; }
-
-    .exercise-card { transition: border-color 0.15s, opacity 0.15s; }
-    .exercise-card.dragging { opacity: 0.4; }
-    .exercise-card.drag-over { border-color: var(--accent); }
-    .drag-handle { cursor: grab; touch-action: none; color: var(--text-muted); font-size: 20px; padding: 4px 8px 4px 0; user-select: none; flex-shrink: 0; line-height: 1; }
-    .drag-handle:active { cursor: grabbing; color: var(--accent); }
 
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 200; display: flex; justify-content: center; align-items: flex-end; }
     .modal-content { background: var(--bg-card); width: 100%; height: 85vh; border-radius: 20px 20px 0 0; padding: 20px; display: flex; flex-direction: column; }
@@ -223,32 +219,6 @@
       await apiCall('/sync_data', data); 
     }
 
-    async function exportData() {
-      if (!state.user_id) return;
-      await syncData(); // make sure server has the latest before exporting
-      const isLocal = window.location.href.includes("127.0.0.1") || window.location.href.includes("localhost");
-      const baseUrl = isLocal ? "http://127.0.0.1:5000" : "";
-      try {
-        const res = await fetch(baseUrl + '/export_data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: state.user_id })
-        });
-        if (!res.ok) { alert('Export failed. Try again.'); return; }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ironlog_${state.username}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch(err) {
-        alert('Export failed: ' + err.message);
-      }
-    }
-
     function nav(view) {
       state.view = view;
       const navBar = document.getElementById('main-nav');
@@ -328,10 +298,7 @@
           content.innerHTML = `
             <div class="header flex-between">
               <span>Iron Log</span>
-              <div style="display:flex;gap:8px;">
-                <button class="btn" style="width:auto;padding:6px 12px;font-size:12px;" onclick="exportData()">⬇ Export</button>
-                <button class="btn" style="width:auto;padding:6px 12px;font-size:12px;" onclick="logout()">Log Out</button>
-              </div>
+              <button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px;" onclick="logout()">Log Out</button>
             </div>
             ${state.activeWorkout && !state.activeWorkout.isTemplateEdit ? `
               <div class="card" style="border-color: var(--accent);" onclick="nav('workout')">
@@ -435,7 +402,7 @@
             <tr>
               <td style="white-space: nowrap;">
                 <span style="color: var(--danger); font-size: 14px; font-weight: bold; cursor: pointer; margin-right: 6px;" onclick="removeSet(${exIdx}, ${setIdx})">✕</span>
-                ${setIdx + 1}
+                ${set.isDrop ? '<span class="badge drop-badge">DS</span>' : setIdx + 1}
               </td>
               ${hasWeight ? `<td><input type="number" inputmode="decimal" enterkeyhint="next" class="set-input" value="${set.weight}" onchange="updateSet(${exIdx},${setIdx},'weight',this.value)" onkeydown="handleEnter(event)" placeholder="lbs"></td>` : ''}
               ${hasReps   ? `<td><input type="number" inputmode="numeric" enterkeyhint="next" pattern="[0-9]*" class="set-input" value="${set.reps}"   onchange="updateSet(${exIdx},${setIdx},'reps',this.value)" onkeydown="handleEnter(event)" placeholder="reps"></td>` : ''}
@@ -444,13 +411,13 @@
             </tr>`).join('');
 
           return `
-            <div class="card exercise-card" data-ex-idx="${exIdx}">
+            <div class="card ${ex.isSuperset ? 'superset-bracket' : ''}">
               <div class="flex-between" style="margin-bottom:8px;">
-                <div style="display:flex;align-items:center;min-width:0;">
-                  <span class="drag-handle" onmousedown="startExerciseDrag(event,${exIdx})" ontouchstart="startExerciseDrag(event,${exIdx})">⠿</span>
+                <div>
+                  ${ex.isSuperset ? '<span class="badge" style="background:#38bdf8;">Superset</span>' : ''}
                   <strong style="font-size:18px;">${ex.name}</strong>
                 </div>
-                <button class="btn" style="width:auto;padding:6px 10px;font-size:12px;flex-shrink:0;" onclick="removeEx(${exIdx})">✕</button>
+                <button class="btn" style="width:auto;padding:6px 10px;font-size:12px;" onclick="removeEx(${exIdx})">✕</button>
               </div>
               ${lastHtml}
               <table>
@@ -465,6 +432,9 @@
               </table>
               <div style="display:flex;gap:8px;margin-top:16px;">
                 <button class="btn" style="font-size:13px;padding:10px;" onclick="addSet(${exIdx})">+ Set</button>
+                <button class="btn" style="font-size:13px;padding:10px;" onclick="addDropSet(${exIdx})">+ Drop Set</button>
+                ${exIdx > 0 && !ex.isSuperset ? `<button class="btn" style="font-size:13px;padding:10px;" onclick="toggleSuperset(${exIdx})">🔗 Superset</button>` : ''}
+                ${ex.isSuperset ? `<button class="btn" style="font-size:13px;padding:10px;" onclick="toggleSuperset(${exIdx})">Unlink</button>` : ''}
               </div>
             </div>`;
         }).join('');
@@ -497,7 +467,7 @@
               <strong style="margin-left:8px;">${w.name}</strong>
             `}
           </div>
-          <div id="exercise-list">${exercisesHtml}</div>
+          ${exercisesHtml}
           <div style="padding:12px;padding-bottom:40px;">
             <button class="btn" style="border-style:dashed;padding:16px;" onclick="openSearchModal()">🔍 Add Exercise</button>
           </div>`;
@@ -778,8 +748,8 @@
       } 
       else {
         state.activeWorkout.exercises.push({
-          id: exDef.id, name: exDef.name, fields: exDef.fields,
-          sets: [{ weight: '', reps: '', time: '', completed: false }]
+          id: exDef.id, name: exDef.name, fields: exDef.fields, isSuperset: false,
+          sets: [{ weight: '', reps: '', time: '', completed: false, isDrop: false }]
         });
         
         if (el) {
@@ -794,66 +764,15 @@
     }
 
     function addSet(exIdx) {
-      state.activeWorkout.exercises[exIdx].sets.push({ weight: '', reps: '', time: '', completed: false });
+      state.activeWorkout.exercises[exIdx].sets.push({ weight: '', reps: '', time: '', completed: false, isDrop: false });
       saveActive(); render();
     }
 
-    let reorderDrag = null;
-
-    function getExerciseDropIdx(clientY) {
-      const cards = [...document.querySelectorAll('#exercise-list .exercise-card')];
-      for (let i = 0; i < cards.length; i++) {
-        const rect = cards[i].getBoundingClientRect();
-        if (clientY < rect.top + rect.height / 2) return i;
-      }
-      return Math.max(0, cards.length - 1);
-    }
-
-    function clearExerciseDragUI() {
-      document.querySelectorAll('.exercise-card').forEach(c => c.classList.remove('dragging', 'drag-over'));
-    }
-
-    function reorderExercises(fromIdx, toIdx) {
-      if (fromIdx === toIdx) return;
-      const exercises = state.activeWorkout.exercises;
-      const [item] = exercises.splice(fromIdx, 1);
-      exercises.splice(toIdx, 0, item);
-      saveActive();
-      render();
-    }
-
-    function startExerciseDrag(e, exIdx) {
-      e.preventDefault();
-      const card = e.currentTarget.closest('.exercise-card');
-      reorderDrag = { fromIdx: exIdx, card };
-
-      const onMove = (ev) => {
-        ev.preventDefault();
-        const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
-        clearExerciseDragUI();
-        reorderDrag.card.classList.add('dragging');
-        const cards = document.querySelectorAll('#exercise-list .exercise-card');
-        const targetIdx = getExerciseDropIdx(y);
-        if (cards[targetIdx]) cards[targetIdx].classList.add('drag-over');
-      };
-
-      const onEnd = (ev) => {
-        const y = ev.changedTouches ? ev.changedTouches[0].clientY : ev.clientY;
-        const toIdx = getExerciseDropIdx(y);
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onEnd);
-        document.removeEventListener('touchmove', onMove);
-        document.removeEventListener('touchend', onEnd);
-        clearExerciseDragUI();
-        if (reorderDrag) reorderExercises(reorderDrag.fromIdx, toIdx);
-        reorderDrag = null;
-      };
-
-      card.classList.add('dragging');
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onEnd);
-      document.addEventListener('touchmove', onMove, { passive: false });
-      document.addEventListener('touchend', onEnd);
+    function addDropSet(exIdx) {
+      const sets = state.activeWorkout.exercises[exIdx].sets;
+      const lastWeight = sets.length > 0 ? sets[sets.length-1].weight : '';
+      sets.push({ weight: lastWeight, reps: '', time: '', completed: false, isDrop: true });
+      saveActive(); render();
     }
 
     function removeSet(exIdx, setIdx) {
@@ -881,8 +800,16 @@
     function removeEx(exIdx) {
       if(confirm("Remove this entire exercise?")) {
         state.activeWorkout.exercises.splice(exIdx, 1);
+        if(state.activeWorkout.exercises[exIdx] && state.activeWorkout.exercises[exIdx].isSuperset) {
+          state.activeWorkout.exercises[exIdx].isSuperset = false;
+        }
         saveActive(); render();
       }
+    }
+
+    function toggleSuperset(exIdx) {
+      state.activeWorkout.exercises[exIdx].isSuperset = !state.activeWorkout.exercises[exIdx].isSuperset;
+      saveActive(); render();
     }
 
     function togglePause() {
