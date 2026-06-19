@@ -64,18 +64,43 @@ function normDate(dateStr) {
 }
 
 /**
- * Build chart data for an exercise — max weight per session date.
+ * Epley estimated 1RM: weight × (1 + reps / 30)
+ * Returns null for sets with no weight or reps (e.g. timed exercises).
+ */
+export function epley1RM(weight, reps) {
+  const w = parseFloat(weight);
+  const r = parseFloat(reps);
+  if (!w || !r || r <= 0) return null;
+  return Math.round(w * (1 + r / 30));
+}
+
+/**
+ * Build chart data for an exercise per session.
+ * Returns an array of { date, est1RM, volume } — one point per session.
+ * est1RM: best Epley-estimated 1RM across all completed sets.
+ * volume: total weight × reps for all completed sets.
  */
 export function buildExerciseChartData(exId, history) {
   const points = [];
   for (const workout of [...history].reverse()) {
     const ex = workout.exercises?.find(e => e.id === exId);
     if (!ex) continue;
-    const weights = (ex.sets || [])
-      .filter(s => s.completed && parseFloat(s.weight) > 0)
-      .map(s => parseFloat(s.weight));
-    if (!weights.length) continue;
-    points.push({ date: workout.date, value: Math.max(...weights) });
+
+    let best1RM = null;
+    let volume  = 0;
+
+    for (const s of ex.sets || []) {
+      if (!s.completed) continue;
+      const w = parseFloat(s.weight) || 0;
+      const r = parseFloat(s.reps)   || 0;
+      volume += w * r;
+      const est = epley1RM(s.weight, s.reps);
+      if (est && (best1RM === null || est > best1RM)) best1RM = est;
+    }
+
+    if (best1RM !== null || volume > 0) {
+      points.push({ date: workout.date, est1RM: best1RM, volume: Math.round(volume) });
+    }
   }
   return points.reverse();
 }
