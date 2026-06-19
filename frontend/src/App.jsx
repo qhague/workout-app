@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { DB, DEFAULT_EXERCISES } from './db';
 import { syncData } from './api';
 import Auth from './components/Auth';
@@ -19,6 +19,27 @@ export default function App() {
   if (!DB.get('exercises')) DB.set('exercises', DEFAULT_EXERCISES);
 
   const syncTimeoutRef = useRef(null);
+
+  // Global ripple effect on any .btn press
+  useEffect(() => {
+    function onPointerDown(e) {
+      const btn = e.target.closest('.btn');
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const x = (e.clientX ?? rect.left + rect.width / 2) - rect.left;
+      const y = (e.clientY ?? rect.top + rect.height / 2) - rect.top;
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple-el';
+      ripple.style.width = ripple.style.height = `${size}px`;
+      ripple.style.left = `${x - size / 2}px`;
+      ripple.style.top = `${y - size / 2}px`;
+      btn.appendChild(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, []);
 
   const debounceSync = useCallback((workout) => {
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);

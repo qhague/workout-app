@@ -193,7 +193,7 @@ export default function Home({ username, userId, activeWorkout, onNav, onLogout,
 
       {/* Resume active workout */}
       {activeWorkout && !activeWorkout.isTemplateEdit && (
-        <div className="card" style={{ borderColor: 'var(--accent)', cursor: 'pointer' }} onClick={() => onNav('workout')}>
+        <div className="card resume-pulse" style={{ borderColor: 'var(--accent)', cursor: 'pointer' }} onClick={() => onNav('workout')}>
           <div className="flex-between">
             <div>
               <strong>Resume: {activeWorkout.name}</strong>

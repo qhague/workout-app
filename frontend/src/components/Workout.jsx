@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
+  DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay,
 } from '@dnd-kit/core';
 import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
@@ -105,10 +105,66 @@ function RestTimerBar({ seconds, total, onSkip, onAdd }) {
   );
 }
 
+// ── Per-exercise persistent note ──────────────────────────────────────────────
+function ExerciseNote({ exId }) {
+  const saved = (DB.get('exerciseNotes') || {})[exId] || '';
+  const [open, setOpen] = useState(!!saved);
+  const [text, setText] = useState(saved);
+
+  function handleChange(val) {
+    setText(val);
+    const notes = DB.get('exerciseNotes') || {};
+    if (val.trim()) notes[exId] = val;
+    else delete notes[exId];
+    DB.set('exerciseNotes', notes);
+  }
+
+  return (
+    <div style={{ marginBottom: open ? 10 : 6 }}>
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', fontSize: 11, padding: 0,
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}
+        >
+          📝 <span style={{ textDecoration: 'underline dotted' }}>add note</span>
+        </button>
+      ) : (
+        <div style={{ position: 'relative' }}>
+          <textarea
+            autoFocus={!saved}
+            className="input-field"
+            rows={2}
+            style={{
+              fontSize: 12, padding: '6px 28px 6px 8px',
+              minHeight: 0, resize: 'none', color: 'var(--text-muted)',
+              lineHeight: 1.4, marginBottom: 0,
+            }}
+            placeholder="Note to self for next time…"
+            value={text}
+            onChange={e => handleChange(e.target.value)}
+          />
+          <button
+            onClick={() => { if (!text.trim()) setOpen(false); else setOpen(false); }}
+            style={{
+              position: 'absolute', top: 5, right: 6,
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-muted)', fontSize: 13, lineHeight: 1,
+            }}
+          >✕</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Sortable Exercise Card ────────────────────────────────────────────────────
 function ExerciseCard({ ex, exIdx, isEdit, lastSession, history, settings, onUpdate, onRemove, onRestStart }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: ex.id + '_' + exIdx });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.15 : 1 };
 
   const hasWeight = ex.fields.includes('weight');
   const hasReps   = ex.fields.includes('reps');
@@ -160,6 +216,8 @@ function ExerciseCard({ ex, exIdx, isEdit, lastSession, history, settings, onUpd
         <button className="btn" style={{ width: 'auto', padding: '6px 10px', fontSize: 12, flexShrink: 0 }} onClick={() => onRemove(exIdx)}>✕</button>
       </div>
 
+      <ExerciseNote exId={ex.id} />
+
       {lastSession && !isEdit && (
         <div style={{ marginBottom: 10 }}>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 5 }}>
@@ -179,16 +237,6 @@ function ExerciseCard({ ex, exIdx, isEdit, lastSession, history, settings, onUpd
             })}
           </div>
         </div>
-      )}
-
-      {ex.notes !== undefined && (
-        <textarea
-          className="input-field"
-          style={{ fontSize: 13, padding: 8, minHeight: 40, resize: 'vertical', marginBottom: 8 }}
-          placeholder="Exercise notes..."
-          value={ex.notes || ''}
-          onChange={e => onUpdate(exIdx, { ...ex, notes: e.target.value })}
-        />
       )}
 
       <table>
@@ -261,6 +309,7 @@ export default function Workout({ activeWorkout, onSave, onNav, userId }) {
   const [showModal,   setShowModal]   = useState(false);
   const [showSummary, setShowSummary] = useState(null); // finished workout object
   const [priorHistory, setPriorHistory] = useState(null);
+  const [activeId,    setActiveId]    = useState(null);
   const [, setTick] = useState(0);
   const [rest, setRest] = useState(null); // { remaining, total }
   const timerRef   = useRef(null);
@@ -405,6 +454,9 @@ export default function Workout({ activeWorkout, onSave, onNav, userId }) {
   }
 
   const sortableIds = w.exercises.map((ex, i) => ex.id + '_' + i);
+  const activeEx = activeId
+    ? w.exercises.find((ex, i) => ex.id + '_' + i === activeId)
+    : null;
 
   return (
     <>
@@ -456,19 +508,13 @@ export default function Workout({ activeWorkout, onSave, onNav, userId }) {
         )}
       </div>
 
-      {!isEdit && (
-        <div style={{ padding: '8px 12px 0' }}>
-          <textarea
-            className="input-field"
-            style={{ fontSize: 13, padding: 8, minHeight: 36, resize: 'vertical' }}
-            placeholder="Workout notes..."
-            value={w.notes || ''}
-            onChange={e => onSave({ ...w, notes: e.target.value })}
-          />
-        </div>
-      )}
-
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={({ active }) => setActiveId(active.id)}
+        onDragEnd={(event) => { setActiveId(null); handleDragEnd(event); }}
+        onDragCancel={() => setActiveId(null)}
+      >
         <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
           {w.exercises.map((ex, exIdx) => (
             <ExerciseCard
@@ -485,6 +531,39 @@ export default function Workout({ activeWorkout, onSave, onNav, userId }) {
             />
           ))}
         </SortableContext>
+
+        <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }}>
+          {activeEx ? (
+            <div className="card exercise-card" style={{
+              borderColor: 'var(--accent)',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.75)',
+              cursor: 'grabbing',
+            }}>
+              <div className="flex-between">
+                <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                  <span className="drag-handle" style={{ color: 'var(--accent)' }}>⠿</span>
+                  <strong style={{ fontSize: 18 }}>{activeEx.name}</strong>
+                </div>
+                <span className="badge type-badge">{activeEx.sets.length} sets</span>
+              </div>
+              {activeEx.sets.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 10 }}>
+                  {activeEx.sets.slice(0, 5).map((s, i) => {
+                    const parts = [];
+                    if (s.weight) parts.push(`${s.weight}`);
+                    if (s.reps)   parts.push(`×${s.reps}`);
+                    if (s.time)   parts.push(`${s.time}s`);
+                    return (
+                      <span key={i} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 5, padding: '3px 7px', fontSize: 11, color: 'var(--text-muted)' }}>
+                        {parts.join(' ') || `Set ${i + 1}`}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       <div style={{ padding: 12, paddingBottom: rest ? 120 : 40 }}>

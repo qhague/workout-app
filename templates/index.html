@@ -13,62 +13,111 @@
     body { background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
 
     #main-content { flex: 1; overflow-y: auto; padding-bottom: 80px; }
-    .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--bg-card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
-    .nav-btn { background: none; border: none; color: var(--text-muted); font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; width: 25%; cursor: pointer;}
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: rgba(20,20,20,0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
+    .nav-btn { background: none; border: none; color: var(--text-muted); font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; width: 25%; cursor: pointer; position: relative; transition: color 0.2s ease, transform 0.15s ease; }
+    .nav-btn:active { transform: scale(0.88); }
     .nav-btn.active { color: var(--accent); font-weight: bold; }
+    .nav-btn.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 3px; background: var(--accent); border-radius: 2px 2px 0 0; }
 
     .card { background: var(--bg-card); margin: 12px; border-radius: 12px; border: 1px solid var(--border); padding: 16px; }
-    .btn { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); padding: 12px 16px; border-radius: 8px; font-weight: 600; width: 100%; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;}
+    .btn { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); padding: 12px 16px; border-radius: 8px; font-weight: 600; width: 100%; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; position: relative; overflow: hidden; transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
+    .btn:active { transform: scale(0.96); }
     .btn-primary { background: var(--accent); color: #000; border: none; }
+    .btn-primary:active { box-shadow: 0 0 20px rgba(200,255,0,0.45); }
     .btn-danger { background: rgba(255, 68, 68, 0.1); color: var(--danger); border: 1px solid var(--danger); }
-    .input-field { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 6px; width: 100%; font-size: 16px; margin-bottom: 10px; }
+    .input-field { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 6px; width: 100%; font-size: 16px; margin-bottom: 10px; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+    .input-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,255,0,0.12); outline: none; }
     select.input-field { appearance: none; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th { color: var(--text-muted); font-size: 12px; text-align: center; padding-bottom: 8px; font-weight: normal; }
     td { padding: 6px 2px; }
-    .set-input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); text-align: center; padding: 12px 4px; border-radius: 6px; font-size: 16px; }
-    .set-input:focus { border-color: var(--accent); outline: none; }
-    .check-btn { width: 100%; height: 44px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: transparent; display: flex; justify-content: center; align-items: center; font-size: 18px; transition: 0.2s; }
-    .check-btn.done { background: rgba(200,255,0,0.2); border-color: var(--accent); color: var(--accent); }
+    .set-input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); text-align: center; padding: 12px 4px; border-radius: 6px; font-size: 16px; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+    .set-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,255,0,0.12); outline: none; }
+    .check-btn { width: 100%; height: 44px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: transparent; display: flex; justify-content: center; align-items: center; font-size: 18px; transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, color 0.2s ease; }
+    .check-btn.done { background: rgba(200,255,0,0.2); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px rgba(200,255,0,0.2); }
+    .check-btn.pop { animation: checkBounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
     .badge { font-size: 10px; background: #333; color: #fff; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
     .type-badge { background: var(--accent); color: #000; }
 
-    .exercise-card { transition: border-color 0.15s, opacity 0.15s; }
-    .exercise-card.dragging { opacity: 0.4; }
+    .exercise-card { transition: border-color 0.15s ease, opacity 0.2s ease, transform 0.15s ease; }
+    .exercise-card.dragging { opacity: 0.4; transform: scale(0.98); }
     .exercise-card.drag-over { border-color: var(--accent); }
-    .drag-handle { cursor: grab; touch-action: none; color: var(--text-muted); font-size: 20px; padding: 4px 8px 4px 0; user-select: none; flex-shrink: 0; line-height: 1; }
+    .drag-handle { cursor: grab; touch-action: none; color: var(--text-muted); font-size: 20px; padding: 4px 8px 4px 0; user-select: none; flex-shrink: 0; line-height: 1; transition: color 0.15s ease; }
     .drag-handle:active { cursor: grabbing; color: var(--accent); }
 
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 200; display: flex; justify-content: center; align-items: flex-end; }
-    .modal-content { background: var(--bg-card); width: 100%; height: 85vh; border-radius: 20px 20px 0 0; padding: 20px; display: flex; flex-direction: column; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 200; display: flex; justify-content: center; align-items: flex-end; animation: overlayFadeIn 0.22s ease both; }
+    .modal-content { background: var(--bg-card); width: 100%; height: 85vh; border-radius: 20px 20px 0 0; padding: 20px; display: flex; flex-direction: column; animation: modalSlideUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
     .search-list { flex: 1; overflow-y: auto; margin-top: 10px; }
-    
-    .search-item { padding: 16px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+
+    .search-item { padding: 16px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease; }
+    .search-item:active { transform: scale(0.98); }
 
     .auth-container { display: flex; flex-direction: column; justify-content: center; height: 100vh; padding: 20px; }
-    .auth-brand { text-align: center; font-size: 32px; font-weight: bold; margin-bottom: 40px; color: var(--accent); letter-spacing: 2px;}
+    .auth-brand { text-align: center; font-size: 32px; font-weight: bold; margin-bottom: 40px; letter-spacing: 2px; background: linear-gradient(90deg, var(--accent) 0%, #fff 40%, var(--accent) 56%, var(--accent) 100%); background-size: 250% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: shimmer 3.5s linear infinite; }
 
     .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
     .cal-header { text-align: center; font-size: 12px; color: var(--text-muted); padding: 5px 0; }
-    .cal-day { aspect-ratio: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; position: relative; }
+    .cal-day { aspect-ratio: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; position: relative; cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease; }
+    .cal-day:active { transform: scale(0.88); }
     .cal-day.active { border-color: var(--accent); background: rgba(200,255,0,0.1); }
     .cal-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; margin-top: 2px; }
 
     .ex-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); }
     .ex-row:last-child { border-bottom: none; }
     .ex-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
-    .del-btn { background: none; border: none; color: var(--danger); font-size: 20px; cursor: pointer; padding: 4px 8px; flex-shrink: 0; }
+    .del-btn { background: none; border: none; color: var(--danger); font-size: 20px; cursor: pointer; padding: 4px 8px; flex-shrink: 0; transition: transform 0.15s ease, opacity 0.15s ease; }
+    .del-btn:active { transform: scale(0.82); opacity: 0.7; }
 
     .field-toggles { display: flex; gap: 8px; margin-bottom: 12px; }
-    .field-toggle { flex: 1; padding: 10px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; transition: 0.15s; font-family: 'Exo 2', sans-serif; }
+    .field-toggle { flex: 1; padding: 10px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.1s ease; font-family: 'Exo 2', sans-serif; }
+    .field-toggle:active { transform: scale(0.95); }
     .field-toggle.on { background: var(--accent); color: #000; border-color: var(--accent); }
 
     .flex-between { display: flex; justify-content: space-between; align-items: center; }
-    .header { font-size: 22px; font-weight: 700; padding: 16px; border-bottom: 1px solid var(--border); background: var(--bg-card); position: sticky; top: 0; z-index: 10; }
+    .header { font-size: 22px; font-weight: 700; padding: 16px; border-bottom: 1px solid var(--border); background: rgba(20,20,20,0.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 10; }
     .hidden { display: none !important; }
     .timer-display { font-variant-numeric: tabular-nums; font-size: 18px; font-weight: 600; }
+
+    /* === Keyframe Animations === */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes modalSlideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    @keyframes overlayFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes checkBounce {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.28); }
+      70%  { transform: scale(0.92); }
+      100% { transform: scale(1); }
+    }
+    @keyframes shimmer {
+      0%   { background-position: 0% center; }
+      100% { background-position: -250% center; }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(200,255,0,0.35); }
+      50%       { box-shadow: 0 0 0 8px rgba(200,255,0,0); }
+    }
+    @keyframes rippleAnim {
+      from { transform: scale(0); opacity: 0.32; }
+      to   { transform: scale(4); opacity: 0; }
+    }
+
+    /* Staggered card entrance */
+    .card-animate { animation: fadeSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    /* Resume card ambient glow */
+    .resume-pulse { animation: pulseGlow 2.2s ease-in-out infinite; }
+    /* Button ripple element */
+    .ripple-el { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.18); pointer-events: none; animation: rippleAnim 0.55s ease-out forwards; }
   </style>
 </head>
 <body>
@@ -262,6 +311,26 @@
         if(activeBtn) activeBtn.classList.add('active');
       }
       render();
+      requestAnimationFrame(animateCards);
+    }
+
+    function animateCards() {
+      document.querySelectorAll('#main-content .card').forEach((card, i) => {
+        card.classList.add('card-animate');
+        card.style.animationDelay = `${i * 50}ms`;
+      });
+    }
+
+    function addRipple(e, el) {
+      const rect = el.getBoundingClientRect();
+      const x = (e.clientX ?? rect.left + rect.width / 2) - rect.left;
+      const y = (e.clientY ?? rect.top + rect.height / 2) - rect.top;
+      const size = Math.max(rect.width, rect.height);
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple-el';
+      ripple.style.cssText = `width:${size}px;height:${size}px;left:${x - size/2}px;top:${y - size/2}px;`;
+      el.appendChild(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
     }
 
     function handleEnter(e) {
@@ -334,7 +403,7 @@
               </div>
             </div>
             ${state.activeWorkout && !state.activeWorkout.isTemplateEdit ? `
-              <div class="card" style="border-color: var(--accent);" onclick="nav('workout')">
+              <div class="card resume-pulse" style="border-color: var(--accent);" onclick="nav('workout')">
                 <div class="flex-between">
                   <div>
                     <strong>Resume: ${state.activeWorkout.name}</strong>
@@ -876,6 +945,16 @@
       const set = state.activeWorkout.exercises[exIdx].sets[setIdx];
       set.completed = !set.completed;
       saveActive(); render();
+      requestAnimationFrame(() => {
+        const cards = document.querySelectorAll('.exercise-card');
+        if (cards[exIdx]) {
+          const btn = cards[exIdx].querySelectorAll('.check-btn')[setIdx];
+          if (btn) {
+            btn.classList.add('pop');
+            btn.addEventListener('animationend', () => btn.classList.remove('pop'), { once: true });
+          }
+        }
+      });
     }
 
     function removeEx(exIdx) {
@@ -999,6 +1078,12 @@
         </div>
       `;
     }
+
+    // Global button ripple
+    document.addEventListener('pointerdown', e => {
+      const btn = e.target.closest('.btn');
+      if (btn) addRipple(e, btn);
+    });
 
     nav(state.view);
   </script>
