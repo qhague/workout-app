@@ -1,5 +1,5 @@
 from flask_cors import CORS
-from flask import Flask, request, jsonify, render_template, Response
+from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
@@ -47,10 +47,16 @@ def safe_load(json_str, default):
     except:
         return default
 
-# --- SERVE THE FRONTEND ---
-@app.route('/')
-def home():
-    return render_template('index.html')
+# --- SERVE THE REACT FRONTEND ---
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), 'frontend', 'dist')
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react(path):
+    full = os.path.join(FRONTEND_DIST, path)
+    if path and os.path.exists(full):
+        return send_from_directory(FRONTEND_DIST, path)
+    return send_from_directory(FRONTEND_DIST, 'index.html')
 
 # --- API ENDPOINTS ---
 @app.route('/register', methods=['POST'])
