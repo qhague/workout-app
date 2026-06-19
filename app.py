@@ -126,22 +126,25 @@ def export_data():
 
     # --- Workouts sheet (flattened to one row per set) ---
     writer.writerow(['=== WORKOUTS ==='])
-    writer.writerow(['Date', 'Workout Name', 'Type', 'Duration (min)',
-                     'Exercise', 'Set #', 'Weight (lbs)', 'Reps', 'Time (sec)', 'Completed'])
+    writer.writerow(['Date', 'Workout Name', 'Type', 'Duration (min)', 'Workout Notes',
+                     'Exercise', 'Muscle Group', 'Set #', 'Weight', 'Reps', 'Time (sec)', 'RPE', 'Completed'])
     for w in workouts:
         date     = w.get('date', '')
         name     = w.get('name', '')
         wtype    = w.get('type', '')
         duration = round(w.get('duration', 0) / 60, 1)
+        notes    = w.get('notes', '')
         for ex in w.get('exercises', []):
             ex_name = ex.get('name', '')
+            muscle  = ex.get('muscleGroup', '')
             for i, s in enumerate(ex.get('sets', []), 1):
                 writer.writerow([
-                    date, name, wtype, duration,
-                    ex_name, i,
+                    date, name, wtype, duration, notes,
+                    ex_name, muscle, i,
                     s.get('weight', ''),
                     s.get('reps', ''),
                     s.get('time', ''),
+                    s.get('rpe', ''),
                     'Yes' if s.get('completed') else 'No'
                 ])
 
@@ -163,9 +166,9 @@ def export_data():
 
     # --- Exercise library ---
     writer.writerow(['=== EXERCISE LIBRARY ==='])
-    writer.writerow(['Exercise Name', 'ID', 'Tracked Fields'])
+    writer.writerow(['Exercise Name', 'ID', 'Muscle Group', 'Tracked Fields'])
     for ex in exercises:
-        writer.writerow([ex.get('name', ''), ex.get('id', ''), ' + '.join(ex.get('fields', []))])
+        writer.writerow([ex.get('name', ''), ex.get('id', ''), ex.get('muscleGroup', ''), ' + '.join(ex.get('fields', []))])
 
     csv_bytes = output.getvalue().encode('utf-8-sig')  # utf-8-sig adds BOM for Excel
     return Response(

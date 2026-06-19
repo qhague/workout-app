@@ -91,7 +91,7 @@ export default function App() {
             userId={userId}
           />
         )}
-        {view === 'calendar' && <Calendar />}
+        {view === 'calendar' && <Calendar onStartWorkout={saveActiveWorkout} onNav={nav} />}
         {view === 'exercises' && <Exercises onSync={debounceSync} />}
       </div>
 

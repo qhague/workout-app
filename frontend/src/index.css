@@ -293,6 +293,11 @@ td {
   background: rgba(200, 255, 0, 0.1);
 }
 
+.cal-day.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
 .cal-dot {
   width: 6px;
   height: 6px;
