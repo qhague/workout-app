@@ -311,7 +311,7 @@ export default function Workout({ activeWorkout, onSave, onNav, userId }) {
   const [priorHistory, setPriorHistory] = useState(null);
   const [activeId,    setActiveId]    = useState(null);
   const [, setTick] = useState(0);
-  const [rest, setRest] = useState(null); // { remaining, total }
+  const [rest, setRest] = useState(null); // { endTime, total }
   const timerRef   = useRef(null);
   const restRef    = useRef(null);
   const settings   = getSettings();
@@ -332,23 +332,26 @@ export default function Workout({ activeWorkout, onSave, onNav, userId }) {
     return () => clearInterval(timerRef.current);
   }, [w?.startTime, isEdit]);
 
-  // Rest timer countdown
+  // Rest timer countdown — timestamp-based, immune to background-tab throttling
   useEffect(() => {
     if (!rest) { clearInterval(restRef.current); return; }
-    restRef.current = setInterval(() => {
-      setRest(r => {
-        if (!r || r.remaining <= 1) { clearInterval(restRef.current); return null; }
-        return { ...r, remaining: r.remaining - 1 };
-      });
-    }, 1000);
+    restRef.current = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(restRef.current);
-  }, [rest?.remaining === rest?.total]); // only restart when a new timer begins
+  }, [rest?.endTime]);
+
+  // Auto-clear when timer expires
+  useEffect(() => {
+    if (rest && Date.now() >= rest.endTime) {
+      clearInterval(restRef.current);
+      setRest(null);
+    }
+  });
 
   function startRest() {
     if (isEdit) return;
     const total = settings.restSeconds || 90;
     clearInterval(restRef.current);
-    setRest({ remaining: total, total });
+    setRest({ endTime: Date.now() + total * 1000, total });
   }
 
   if (!w) {
@@ -365,6 +368,10 @@ export default function Workout({ activeWorkout, onSave, onNav, userId }) {
     if (w.isPaused) ms -= (Date.now() - w.lastPauseStart);
     return Math.max(0, Math.floor(ms / 1000));
   })();
+
+  const restRemaining = rest
+    ? Math.max(0, Math.ceil((rest.endTime - Date.now()) / 1000))
+    : null;
 
   function updateExercise(exIdx, updated) {
     const exercises = [...w.exercises];
@@ -574,10 +581,10 @@ export default function Workout({ activeWorkout, onSave, onNav, userId }) {
 
       {rest && (
         <RestTimerBar
-          seconds={rest.remaining}
+          seconds={restRemaining}
           total={rest.total}
           onSkip={() => { clearInterval(restRef.current); setRest(null); }}
-          onAdd={() => setRest(r => r ? { ...r, remaining: r.remaining + 30 } : null)}
+          onAdd={() => setRest(r => r ? { ...r, endTime: r.endTime + 30000 } : null)}
         />
       )}
     </>
